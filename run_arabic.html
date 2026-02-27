@@ -1,0 +1,1535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Iman Run - Arabic Learner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Press+Start+2P&family=Noto+Naskh+Arabic:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles */
+        html, body {
+            height: 100%; /* Ensure html and body take full height */
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrollbars on body */
+            background-color: #333; /* Dark background for contrast */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex; /* Use flexbox for centering */
+            justify-content: center;
+            align-items: center; /* Center vertically */
+            position: relative;
+        }
+        .game-font { font-family: 'Press Start 2P', cursive; }
+
+        #game-container {
+            position: relative;
+            /* Let canvas size dictate container size */
+            /* width/height set by JS based on canvas */
+            overflow: hidden; /* Prevent character parts from showing outside */
+            display: flex; /* Center canvas within if needed */
+            justify-content: center;
+            align-items: center;
+             /* Ensure container itself doesn't add extra space */
+             margin: 0;
+             padding: 0;
+             line-height: 0; /* Prevent potential line-height issues */
+
+        }
+
+        canvas {
+            background-color: #A0A0A0;
+            display: block; /* Important */
+            max-width: 100vw; /* Max width is viewport width */
+            max-height: 100vh; /* Max height is viewport height */
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: background 0.5s ease;
+             /* Ensure canvas doesn't have extra margin/padding */
+             margin: 0;
+             padding: 0;
+        }
+        
+
+            #ui-container {
+                position: absolute;
+                top: 10px;
+                left: 50%; transform: translateX(-50%);
+                display: flex; /* Keep as flex row */
+                justify-content: space-between; /* Space score block and pause button */
+                align-items: flex-start; /* Align items to the top */
+                width: 95%;
+                max-width: 600px;
+                color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+                z-index: 10; padding: 8px 15px;
+                background-color: rgba(0, 0, 0, 0.45);
+                border-radius: 6px;
+                display: none; /* Initially hidden */
+                font-size: 0.7rem; /* Consistent font size */
+            }
+            /* Target the first div holding score/lives/level */
+            #ui-container > div:first-child {
+                 display: flex;
+                 flex-direction: column; /* <<< ALWAYS Stack score/lives/level vertically */
+                 align-items: flex-start; /* <<< Align text to the left */
+                 gap: 2px; /* Space between score/lives/level lines */
+            }
+             /* Target the pause button */
+            #ui-container > button {
+                /* No specific margin needed now */
+                 line-height: 1; /* Ensure consistent button height */
+                 align-self: center; /* Vertically center pause button if needed */
+            }
+             /* Ensure individual score/lives/level lines don't wrap */
+             #ui-container > div > div {
+                 white-space: nowrap; /* Prevent wrapping */
+                 line-height: 1.2; /* Add slight line height */
+             }
+            /* --- End UI Container Styling --- */
+
+            #pause-button {
+                 background: none; border: none; color: white; font-size: 1.3rem; /* Adjust size */
+                 cursor: pointer; padding: 0 5px; line-height: 1;
+                 text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+            }
+             #pause-button:hover { color: #ddd; }
+
+            /* --- Message Box Styling --- */
+            #message-box, #pause-overlay {
+                position: absolute;
+                top: 50%; left: 50%; transform: translate(-50%, -50%);
+                background-color: rgba(0, 0, 0, 0.8); /* Darker overlay */
+                color: white;
+                padding: 20px 20px; /* Adjusted padding */
+                border-radius: 10px; text-align: center;
+                z-index: 20;
+                font-size: 1.0rem; /* Keep reduced size */
+                line-height: 1.5; /* Help with potential wrapping */
+                width: 90%; /* Slightly wider */
+                max-width: 380px;
+                 /* Use flex to stack text and button */
+                 display: none; /* Initially hidden, JS will show it */
+                 flex-direction: column;
+                 align-items: center;
+            }
+            /* Reduce button font size and ensure margin */
+            #message-box button {
+                font-size: 0.8rem;
+                padding: 8px 16px;
+                margin-top: 1.5rem; /* Ensure space above button */
+            }
+            /* --- End Message Box Styling --- */
+
+
+        
+        #main-menu {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            /* Background set by JS */
+            background-color: #a86d3d; /* Fallback color */
+            background-size: cover;
+            background-position: center;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 30; color: white; text-align: center; padding: 20px;
+            display: flex;
+        }
+        #main-menu h1 { font-size: 2.5rem; /* Adjusted size */ margin-bottom: 1rem; text-shadow: 3px 3px 5px rgba(0,0,0,0.6); }
+        #main-menu p { font-size: 0.9rem; margin-bottom: 1.5rem; font-family: 'Inter', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+
+        /* Character Selection Styles */
+        #character-select-container {
+             margin-top: 1.5rem; margin-bottom: 2rem;
+        }
+        #character-select-title {
+             font-family: 'Inter', sans-serif; font-size: 1rem; /* Adjusted */
+             margin-bottom: 1rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        #character-options {
+             display: flex; flex-wrap: wrap; gap: 10px; /* Reduced gap */
+             justify-content: center; max-width: 300px; /* Adjusted max-width */
+        }
+        .char-option {
+             width: 60px; height: 90px; /* Adjusted size */
+             border: 3px solid transparent; border-radius: 8px; cursor: pointer;
+             position: relative; overflow: hidden; background-color: rgba(255, 255, 255, 0.1);
+             transition: border-color 0.2s ease, transform 0.2s ease;
+             display: flex; justify-content: center; align-items: center;
+        }
+         .char-option img { max-width: 90%; max-height: 90%; object-fit: contain; display: block; }
+         .char-option.placeholder { /* Styles for placeholders */ }
+        .char-option:hover { transform: scale(1.05); }
+        .char-option.selected { border-color: #4CAF50; box-shadow: 0 0 10px #4CAF50; }
+
+        #start-button {
+            padding: 12px 25px; font-size: 1.2rem; /* Adjusted size */
+            background-color: #4CAF50; border: none; color: white; border-radius: 8px;
+            cursor: pointer; transition: background-color 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3); margin-top: 2rem;
+        }
+        #start-button:hover { background-color: #45a049; }
+        #start-button:disabled { background-color: #9E9E9E; cursor: not-allowed; opacity: 0.7; }
+
+        /* Feedback Flash Styles */
+        .feedback-flash { /* Styles remain the same */ }
+        .feedback-flash.success { background-color: rgba(0, 255, 0, 0.5); }
+        .feedback-flash.failure { background-color: rgba(255, 0, 0, 0.5); }
+        .feedback-flash.visible { opacity: 1; }
+
+        /* Removed old CSS character styles */
+
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div id="main-menu">
+        <h1 class="game-font">Iman Run</h1>
+        <p>Learn Arabic Vocabulary!</p>
+
+        <div id="character-select-container">
+            <div id="character-select-title">Select Character:</div>
+            <div id="character-options">
+                <div class="char-option selected" data-sprite="suit" title="Suit Abdi">
+                    <img src="assets/select_suit.png" alt="Suit Character"
+                         onerror="this.onerror=null; this.parentElement.classList.add('placeholder'); this.parentElement.innerText='Suit (Img Err)';">
+                </div>
+                <div class="char-option" data-sprite="thobe" title="Thobe Abdi">
+                     <img src="assets/select_thobe.png" alt="Thobe Character"
+                          onerror="this.onerror=null; this.parentElement.classList.add('placeholder'); this.parentElement.innerText='Thobe (Img Err)';">
+                </div>
+                 <div class="char-option" data-sprite="baller" title="Baller Abdi">
+                     <img src="assets/select_baller.png" alt="Baller Character"
+                          onerror="this.onerror=null; this.parentElement.classList.add('placeholder'); this.parentElement.innerText='Baller (Img Err)';">
+                </div>
+            </div>
+        </div>
+        <button id="start-button" class="game-font">Start Game</button>
+        <p id="loading-message" class="mt-4 text-sm" style="display: none;">Loading assets...</p>
+    </div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+         <div id="ui-container" class="game-font">
+            <div>
+                 <div>Score: <span id="score">0</span></div>
+                 <div>Lives: <span id="lives">❤️❤️❤️</span></div>
+                 <div>Level: <span id="level">1</span></div>
+            </div>
+            <button id="pause-button">❚❚</button>
+            <div id="message-box" class="game-font">
+                <span id="game-over-text">Game Over! Score: 0</span>
+                <div class="mt-4 flex justify-center gap-4">
+                     <button id="restart-button" class="px-4 py-2 bg-blue-500 hover:bg-blue-700 text-white rounded game-font text-sm">Restart</button>
+                     <button id="home-button" class="px-4 py-2 bg-gray-500 hover:bg-gray-700 text-white rounded game-font text-sm">Home</button>
+                </div>
+            </div>
+        <div id="pause-overlay" class="game-font">Paused</div>
+        <div id="feedback-flash" class="feedback-flash"></div>
+    </div>
+
+
+    <script>
+        // --- Game Setup ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameContainer = document.getElementById('game-container');
+        const scoreElement = document.getElementById('score');
+        const livesElement = document.getElementById('lives');
+        const levelElement = document.getElementById('level');
+        const messageBox = document.getElementById('message-box');
+        const homeButton = document.getElementById('home-button'); // <<< ADD THIS LINE
+        const restartButton = document.getElementById('restart-button');
+        const mainMenu = document.getElementById('main-menu');
+        const startButton = document.getElementById('start-button');
+        const uiContainer = document.getElementById('ui-container');
+        const loadingMessage = document.getElementById('loading-message');
+        const feedbackFlash = document.getElementById('feedback-flash');
+        const pauseButton = document.getElementById('pause-button');
+        const pauseOverlay = document.getElementById('pause-overlay');
+        const characterOptions = document.querySelectorAll('.char-option');
+
+        // --- Game Configuration ---
+        const collectibleWidth = 90; const collectibleHeight = 90;
+        const GATE_TRIGGER_COUNT = 3;
+        const LEVEL_UP_GATES = 2;
+        const MAX_LEVEL = 15;
+        // --- Frame-Based Values ---
+        const BASE_GAME_SPEED = 3.5;
+        const MAX_GAME_SPEED = 14;
+        const SPEED_INCREMENT = 0.75;
+        // Physics values (frame-based)
+        const jumpVelocity = 10;
+        const gravity = 0.4;
+        const slideDuration = 60;
+        // Timer values (frame-based)
+        const spawnInterval = 100;
+        const obstacleSpawnInterval = 45; // Increased obstacle frequency
+        // --- End Frame-Based Values ---
+
+        // --- Vocabulary Data (Expanded & Tiered) ---
+        // <<< RE-ADDED THE VOCABULARY LIST >>>
+        const vocabulary_raw = [
+            { arabic: "بَيْتٌ", english: "house", level: 1},
+            { arabic: "مَسْجِدٌ", english: "mosque", level: 1},
+            { arabic: "بَابٌ", english: "door", level: 1},
+            { arabic: "كِتَابٌ", english: "book", level: 1},
+            { arabic: "قَلَمٌ", english: "pen", level: 1},
+            { arabic: "مِفْتَاحٌ", english: "key", level: 1},
+            { arabic: "مَكْتَبٌ", english: "desk", level: 1},
+            { arabic: "سَرِيرٌ", english: "bed", level: 1},
+            { arabic: "كُرْسِيٌ", english: "chair", level: 1},
+            { arabic: "نَجْمٌ", english: "star", level: 1},
+            { arabic: "قَميصٌ", english: "shirt", level: 1},
+            { arabic: "طَبِيبٌ", english: "doctor", level: 1},
+            { arabic: "وَلَدٌ", english: "boy", level: 1},
+            { arabic: "طَالِبٌ", english: "student", level: 1},
+            { arabic: "رَجُلٌ", english: "man", level: 1},
+            { arabic: "تَاجِرٌ", english: "merchant", level: 1},
+            { arabic: "كَلْبٌ", english: "dog", level: 1},
+            { arabic: "قِطٌّ", english: "cat", level: 1},
+            { arabic: "حِمَارٌ", english: "donkey", level: 1},
+            { arabic: "حِصَانٌ", english: "horse", level: 1},
+            { arabic: "جَمَلٌ", english: "camel", level: 1},
+            { arabic: "دِيكٌ", english: "rooster", level: 1},
+            { arabic: "مُدَرِّسٌ", english: "teacher", level: 1},
+            { arabic: "مِنْدِيلٌ", english: "napkin/handkerchief", level: 1},
+            { arabic: "إِمَامٌ", english: "imam", level: 2},
+            { arabic: "حَجَرٌ", english: "rock", level: 2},
+            { arabic: "سُكَّرٌ", english: "sugar", level: 2},
+            { arabic: "لَبَنٌ", english: "milk/yogurt", level: 2},
+            { arabic: "غَنِيٌّ", english: "rich", level: 2},
+            { arabic: "فَقِيرٌ", english: "poor", level: 2},
+            { arabic: "طَوِيلٌ", english: "tall", level: 2},
+            { arabic: "قَصِيرٌ", english: "short", level: 2},
+            { arabic: "بَارِدٌ", english: "cold", level: 2},
+            { arabic: "حَارٌ", english: "hot", level: 2},
+            { arabic: "جَالِسٌ", english: "sitting", level: 2},
+            { arabic: "وَاقِفٌ", english: "standing", level: 2},
+            { arabic: "جَدِيدٌ", english: "new", level: 2},
+            { arabic: "قَدِيمٌ", english: "old", level: 2},
+            { arabic: "قَرِيبٌ", english: "near", level: 2},
+            { arabic: "بَعِيدٌ", english: "far", level: 2},
+            { arabic: "نَظِيفٌ", english: "clean", level: 2},
+            { arabic: "وَسِخٌ", english: "dirty", level: 2},
+            { arabic: "صَغِيرٌ", english: "small", level: 2},
+            { arabic: "كَبِيرٌ", english: "big", level: 2},
+            { arabic: "خَفِيفٌ", english: "light (weight)", level: 2},
+            { arabic: "ثَقِيلٌ", english: "heavy", level: 2},
+            { arabic: "وَرَقٌ", english: "paper", level: 2},
+            { arabic: "مَاءٌ", english: "water", level: 2},
+            { arabic: "تُفَّاحٌ", english: "apple", level: 2},
+            { arabic: "جَمِيلٌ", english: "beautiful", level: 2},
+            { arabic: "دُكَّانٌ", english: "shop", level: 3},
+            { arabic: "حُلْوٌ", english: "sweet", level: 3},
+            { arabic: "مَرِيضٌ", english: "sick", level: 3},
+            { arabic: "قَمَرٌ", english: "moon", level: 3},
+            { arabic: "شَمْسٌ", english: "sun", level: 3},
+            { arabic: "مَكْسُورٌ", english: "broken", level: 3},
+            { arabic: "مَفْتُوحٌ", english: "open", level: 3},
+            { arabic: "مُغلَق", english: "closed", level: 3}, // Corrected spelling
+            { arabic: "دَفْتَرٌ", english: "notebook", level: 3},
+            { arabic: "أَبٌ", english: "father", level: 3},
+            { arabic: "جَنَّةٌ", english: "paradise", level: 3},
+            { arabic: "خُبْزٌ", english: "bread", level: 3},
+            { arabic: "عَيْنٌ", english: "eye", level: 3},
+            { arabic: "غَدَاءٌ", english: "lunch/supper", level: 3},
+            { arabic: "فَمٌ", english: "mouth", level: 3},
+            { arabic: "هَوَاءٌ", english: "wind", level: 3},
+            { arabic: "يَدٌ", english: "hand", level: 3},
+            { arabic: "ثَوْبٌ", english: "garment", level: 3},
+            { arabic: "ذَهَبٌ", english: "gold", level: 3},
+            { arabic: "زَهْرَةٌ", english: "flower", level: 3},
+            { arabic: "سَمَكٌ", english: "fish", level: 3},
+            { arabic: "صَدْرٌ", english: "chest", level: 3},
+            { arabic: "ضَيْفٌ", english: "guest", level: 3},
+            { arabic: "ظُهْرٌ", english: "Midday", level: 3},
+            { arabic: "عَصر", english: "time/afternoon", level: 3}, // Corrected spelling
+            { arabic: "لَحْمٌ", english: "meat", level: 3},
+            { arabic: "رَأْسٌ", english: "head", level: 4},
+            { arabic: "وَجْهٌ", english: "face", level: 4},
+            { arabic: "صَدِيقٌ", english: "friend", level: 4},
+            { arabic: "أَخٌ", english: "brother", level: 4},
+            { arabic: "رَسُولٌ", english: "messenger", level: 4},
+            { arabic: "قُرْآنٌ", english: "Qur'an", level: 4},
+            { arabic: "كَعْبَةٌ", english: "Ka'bah", level: 4},
+            { arabic: "إِصْبَعٌ", english: "finger", level: 4},
+            { arabic: "ظُفْرٌ", english: "finger nail", level: 4},
+            { arabic: "صَابُونٌ", english: "soap", level: 4},
+            { arabic: "صَلاةٌ", english: "prayer", level: 4},
+            { arabic: "لَذِيْذٌ", english: "Delicious", level: 4},
+            { arabic: "طَبِيْبٌ", english: "Doctor", level: 4}, // Note: Duplicate 'doctor', using uppercase for distinction if needed
+            { arabic: "عَلَى", english: "on", level: 4},
+            { arabic: "سَمَاءٌ", english: "sky", level: 4},
+            { arabic: "فَصْلٌ", english: "class", level: 4},
+            { arabic: "مِرْحَاضٌ", english: "toilet room", level: 4},
+            { arabic: "أَيْنَ", english: "where", level: 4},
+            { arabic: "غُرْفةٌ", english: "room", level: 4},
+            { arabic: "حَمَّامٌ", english: "shower room", level: 4},
+            { arabic: "مَطْبَخٌ", english: "kitchen", level: 4},
+            { arabic: "فِي", english: "in", level: 4},
+            { arabic: "مِن", english: "from", level: 4}, // Corrected spelling
+            { arabic: "إِلَى", english: "to", level: 4},
+            { arabic: "مُهَنْدِسٌ", english: "engineer", level: 5},
+            { arabic: "أَنْتَ", english: "you (m)", level: 5},
+            { arabic: "هُوَ", english: "he", level: 5},
+            { arabic: "اَلْفَجْرُ", english: "dawn", level: 5},
+            { arabic: "اَلظُّهْرُ", english: "noon", level: 5},
+            { arabic: "اَلْعَصْرُ", english: "afternoon", level: 5},
+            { arabic: "اَلْمَغْرِبُ", english: "sunset", level: 5},
+            { arabic: "اَلْعِشَاءُ", english: "night", level: 5},
+            { arabic: "مُدِيرٌ", english: "principal", level: 5},
+            { arabic: "ذَلِكَ", english: "that", level: 5},
+            { arabic: "مَا", english: "what", level: 5},
+            { arabic: "أَ", english: "is? (question particle)", level: 5},
+            { arabic: "نَعَمْ", english: "yes", level: 5},
+            { arabic: "لاَ", english: "no", level: 5},
+            { arabic: "لِمَاذَا", english: "why", level: 5},
+            { arabic: "هَؤُلاَءِ", english: "these", level: 5},
+            { arabic: "اَلَّذِي", english: "who, which (m. sing.)", level: 5},
+            { arabic: "اَلَّتِي", english: "who, which (f. sing.)", level: 5},
+            { arabic: "اَلَّذِينَ", english: "who, which (m. pl.)", level: 5},
+            { arabic: "تِلْكَ", english: "that (f)", level: 5},
+            { arabic: "أُولَئِكَ", english: "those", level: 5},
+            { arabic: "هِيَ", english: "she", level: 5},
+            { arabic: "هُمْ", english: "they (m)", level: 5},
+            { arabic: "هُنَّ", english: "they (f)", level: 5},
+            { arabic: "أَنْتِ", english: "you (f)", level: 6},
+            { arabic: "أَنْتُمْ", english: "you (m. pl.)", level: 6},
+            { arabic: "أَنْتُنَّ", english: "you (f. pl.)", level: 6},
+            { arabic: "أَنَا", english: "I", level: 6},
+            { arabic: "نَحْنُ", english: "we", level: 6},
+            { arabic: "ـهُ", english: "his", level: 6},
+            { arabic: "ـهَا", english: "her", level: 6},
+            { arabic: "ـكَ", english: "your (m)", level: 6},
+            { arabic: "ـكِ", english: "your (f)", level: 6},
+            { arabic: "ـي", english: "my", level: 6},
+            { arabic: "ـهِمْ", english: "their (m)", level: 6},
+            { arabic: "ـهِنَّ", english: "their (f)", level: 6},
+            { arabic: "ـكُمْ", english: "your (m. pl.)", level: 6},
+            { arabic: "ـكُنَّ", english: "your (f. pl.)", level: 6},
+            { arabic: "ـنَا", english: "our", level: 6},
+            { arabic: "ذَهَبَ", english: "he went", level: 6},
+            { arabic: "ذَهَبَتْ", english: "she went", level: 6},
+            { arabic: "ذَهَبْتَ", english: "you went (m)", level: 6},
+            { arabic: "ذَهَبْتِ", english: "you went (f)", level: 6},
+            { arabic: "ذَهَبْتُ", english: "I went", level: 6},
+            { arabic: "ذَهَبُوا", english: "they went (m)", level: 6},
+            { arabic: "ذَهَبْنَ", english: "they went (f)", level: 6},
+            { arabic: "ذَهَبْتُمْ", english: "you went (m. pl.)", level: 6},
+            { arabic: "ذَهَبْتُنَّ", english: "you went (f. pl.)", level: 6},
+            { arabic: "ذَهَبْنَا", english: "we went", level: 6},
+            { arabic: "خَرَجَ", english: "he went out", level: 7},
+            { arabic: "خَرَجَتْ", english: "she went out", level: 7},
+            { arabic: "خَرَجْتَ", english: "you went out (m)", level: 7},
+            { arabic: "خَرَجْتِ", english: "you went out (f)", level: 7},
+            { arabic: "خَرَجْتُ", english: "I went out", level: 7},
+            { arabic: "خَرَجُوا", english: "they went out (m)", level: 7},
+            { arabic: "خَرَجْنَ", english: "they went out (f)", level: 7},
+            { arabic: "خَرَجْتُمْ", english: "you went out (m. pl.)", level: 7},
+            { arabic: "خَرَجْتُنَّ", english: "you went out (f. pl.)", level: 7},
+            { arabic: "خَرَجْنَا", english: "we went out", level: 7},
+            { arabic: "جَلَسَ", english: "he sat", level: 7},
+            { arabic: "جَلَسَتْ", english: "she sat", level: 7},
+            { arabic: "جَلَسْتَ", english: "you sat (m)", level: 7},
+            { arabic: "جَلَسْتِ", english: "you sat (f)", level: 7},
+            { arabic: "جَلَسْتُ", english: "I sat", level: 7},
+            { arabic: "جَلَسُوا", english: "they sat (m)", level: 7},
+            { arabic: "جَلَسْنَ", english: "they sat (f)", level: 7},
+            { arabic: "جَلَسْتُمْ", english: "you sat (m. pl.)", level: 7},
+            { arabic: "جَلَسْتُنَّ", english: "you sat (f. pl.)", level: 7},
+            { arabic: "جَلَسْنَا", english: "we sat", level: 7},
+            { arabic: "مُحَمَّدٌ", english: "Muhammad", level: 8},
+            { arabic: "خَالِدٌ", english: "Khalid", level: 8},
+            { arabic: "حَامِدٌ", english: "Hamid", level: 8},
+            { arabic: "يَاسِرٌ", english: "Yasir", level: 8},
+            { arabic: "عَمَّارٌ", english: "Ammar", level: 8},
+            { arabic: "سَعِيدٌ", english: "Sa'id", level: 8},
+            { arabic: "عَلِيٌّ", english: "Ali", level: 8},
+            { arabic: "عَبَّاسٌ", english: "Abbas", level: 8},
+            { arabic: "آمِنَةُ", english: "Aminah", level: 8},
+            { arabic: "زَيْنَبُ", english: "Zaynab", level: 8},
+            { arabic: "فَاطِمَةُ", english: "Fatimah", level: 8},
+            { arabic: "مَرْيَمُ", english: "Maryam", level: 8},
+            { arabic: "عَائِشَةُ", english: "Aishah", level: 8},
+            { arabic: "خَدِيجَةُ", english: "Khadijah", level: 8},
+            { arabic: "صَفِيَّةُ", english: "Safiyyah", level: 8},
+            { arabic: "رُقَيَّةُ", english: "Ruqayyah", level: 8},
+            { arabic: "اِبْنٌ", english: "son", level: 8},
+            { arabic: "أَبْنَاءٌ", english: "sons", level: 8},
+            { arabic: "اِسْمٌ", english: "name", level: 8},
+            { arabic: "أَسْمَاءٌ", english: "names", level: 8},
+            { arabic: "زَمِيلٌ", english: "colleague (m)", level: 8},
+            { arabic: "زُمَلاَءُ", english: "colleagues (m)", level: 8},
+            { arabic: "زَوْجٌ", english: "husband", level: 8},
+            { arabic: "أَزْوَاجٌ", english: "husbands", level: 8},
+            { arabic: "وَاحِدٌ", english: "one", level: 8},
+            { arabic: "ضَعِيفٌ", english: "weak", level: 8},
+            { arabic: "ضُعَفَاءُ", english: "weak (pl)", level: 8},
+            { arabic: "عَالِمٌ", english: "scholar", level: 8},
+            { arabic: "عُلَمَاءُ", english: "scholars", level: 9},
+            { arabic: "طِفْلٌ", english: "child", level: 9},
+            { arabic: "أَطْفَالٌ", english: "children", level: 9},
+            { arabic: "فَتًى", english: "young man", level: 9},
+            { arabic: "فِتْيَةٌ", english: "young men", level: 9},
+            { arabic: "أَخٌ", english: "brother", level: 9}, // Note: Duplicate 'brother'
+            { arabic: "إِخْوَةٌ", english: "brothers", level: 9},
+            { arabic: "جَدِيدٌ", english: "new (m)", level: 9}, // Note: Duplicate 'new'
+            { arabic: "جُدُدٌ", english: "new (pl)", level: 9},
+            { arabic: "مُدَرِّسٌ", english: "teacher (m)", level: 9}, // Note: Duplicate 'teacher'
+            { arabic: "مُدَرِّسُونَ", english: "teachers (m)", level: 9},
+            { arabic: "مُهَنْدِسٌ", english: "engineer (m)", level: 9}, // Note: Duplicate 'engineer'
+            { arabic: "مُهَنْدِسُونَ", english: "engineers (m)", level: 9},
+            { arabic: "فَلاَّحٌ", english: "farmer", level: 9},
+            { arabic: "فَلاَّحُونَ", english: "farmers", level: 9},
+            { arabic: "مُجْتَهِدٌ", english: "hardworking (m)", level: 9},
+            { arabic: "مُجْتَهِدُونَ", english: "hardworking (m. pl.)", level: 9},
+            { arabic: "مُسْلِمٌ", english: "Muslim (m)", level: 9},
+            { arabic: "مُسْلِمُونَ", english: "Muslims (m)", level: 9},
+            { arabic: "حَاجٌّ", english: "pilgrim", level: 9},
+            { arabic: "حُجَّاجٌ", english: "pilgrims", level: 9},
+            { arabic: "رَجُلٌ", english: "man", level: 9}, // Note: Duplicate 'man'
+            { arabic: "رِجَالٌ", english: "men", level: 9},
+            { arabic: "كَبِيرٌ", english: "big (m)", level: 9}, // Note: Duplicate 'big'
+            { arabic: "كِبَارٌ", english: "big (pl)", level: 9},
+            { arabic: "صَغِيرٌ", english: "small (m)", level: 9}, // Note: Duplicate 'small'
+            { arabic: "صِغَارٌ", english: "small (pl)", level: 9},
+            { arabic: "قَصِيرٌ", english: "short (m)", level: 10}, // Note: Duplicate 'short'
+            { arabic: "قِصَارٌ", english: "short (pl)", level: 10},
+            { arabic: "طَوِيلٌ", english: "tall (m)", level: 10}, // Note: Duplicate 'tall'
+            { arabic: "طِوَالٌ", english: "tall (pl)", level: 10},
+            { arabic: "وَلَدٌ", english: "boy", level: 10}, // Note: Duplicate 'boy'
+            { arabic: "أَوْلاَدٌ", english: "boys", level: 10},
+            { arabic: "عَمٌّ", english: "paternal uncle", level: 10},
+            { arabic: "أَعْمَامٌ", english: "paternal uncles", level: 10},
+            { arabic: "ضَيْفٌ", english: "guest", level: 10}, // Note: Duplicate 'guest'
+            { arabic: "ضُيُوفٌ", english: "guests", level: 10},
+            { arabic: "شَيْخٌ", english: "old man, scholar", level: 10},
+            { arabic: "شُيُوخٌ", english: "old men, scholars", level: 10},
+            { arabic: "فَقِيرٌ", english: "poor (m)", level: 10}, // Note: Duplicate 'poor'
+            { arabic: "فُقَرَاءُ", english: "poor (pl)", level: 10},
+            { arabic: "غَنِيٌّ", english: "rich (m)", level: 10}, // Note: Duplicate 'rich'
+            { arabic: "أَغْنِيَاءُ", english: "rich (pl)", level: 10},
+            { arabic: "صَدِيقٌ", english: "friend (m)", level: 10}, // Note: Duplicate 'friend'
+            { arabic: "أَصْدِقَاءُ", english: "friends (m)", level: 10},
+            { arabic: "طَبِيبٌ", english: "doctor (m)", level: 10}, // Note: Duplicate 'doctor'
+            { arabic: "أَطِبَّاءُ", english: "doctors (m)", level: 10},
+            { arabic: "أُخْتٌ", english: "sister", level: 10},
+            { arabic: "أَخَوَاتٌ", english: "sisters", level: 10},
+            { arabic: "فَتَاةٌ", english: "young woman", level: 10},
+            { arabic: "فَتَيَاتٌ", english: "young women", level: 10},
+            { arabic: "جَدِيدَةٌ", english: "new (f)", level: 10},
+            { arabic: "كَبِيرَةٌ", english: "big (f)", level: 10},
+            { arabic: "صَغِيرَةٌ", english: "small (f)", level: 11},
+            { arabic: "طَوِيلَةٌ", english: "tall (f)", level: 11},
+            { arabic: "مُدَرِّسَةٌ", english: "teacher (f)", level: 11},
+            { arabic: "مُدَرِّسَاتٌ", english: "teachers (f)", level: 11},
+            { arabic: "طَبِيبَةٌ", english: "doctor (f)", level: 11},
+            { arabic: "طَبِيبَاتٌ", english: "doctors (f)", level: 11},
+            { arabic: "مُسْلِمَةٌ", english: "Muslim (f)", level: 11},
+            { arabic: "مُسْلِمَاتٌ", english: "Muslims (f)", level: 11},
+            { arabic: "زَوْجَةٌ", english: "wife", level: 11},
+            { arabic: "زَوْجَاتٌ", english: "wives", level: 11},
+            { arabic: "بِنْتٌ", english: "daughter, girl", level: 11},
+            { arabic: "بَنَاتٌ", english: "daughters, girls", level: 11},
+            { arabic: "عَمَّةٌ", english: "paternal aunt", level: 11},
+            { arabic: "عَمَّاتٌ", english: "paternal aunts", level: 11},
+            { arabic: "خَالَةٌ", english: "maternal aunt", level: 11},
+            { arabic: "خَالاَتٌ", english: "maternal aunts", level: 11},
+            { arabic: "مُمَرِّضَةٌ", english: "nurse (f)", level: 11},
+            { arabic: "مُمَرِّضَاتٌ", english: "nurses (f)", level: 11},
+            { arabic: "اِمْرَأَةٌ", english: "woman", level: 11},
+            { arabic: "نِسَاءٌ", english: "women", level: 11},
+            { arabic: "قَرِيبٌ", english: "near (m)", level: 11}, // Note: Duplicate 'near'
+            { arabic: "بَعِيدٌ", english: "far (m)", level: 11}, // Note: Duplicate 'far'
+            { arabic: "كَسْلاَنُ", english: "lazy (m)", level: 11},
+            { arabic: "جَوْعَانُ", english: "hungry (m)", level: 11},
+            { arabic: "عَطْشَانُ", english: "thirsty (m)", level: 11},
+            { arabic: "غَضْبَانُ", english: "angry (m)", level: 11},
+            { arabic: "مَلآنُ", english: "full (m)", level: 12},
+            { arabic: "قَلِيلٌ", english: "few", level: 12},
+            { arabic: "كَثِيرٌ", english: "many", level: 12},
+            { arabic: "جَمِيلٌ", english: "beautiful (m)", level: 12}, // Note: Duplicate 'beautiful'
+            { arabic: "نَظِيفٌ", english: "clean (m)", level: 12}, // Note: Duplicate 'clean'
+            { arabic: "وَسِخٌ", english: "dirty (m)", level: 12}, // Note: Duplicate 'dirty'
+            { arabic: "بَارِدٌ", english: "cold (m)", level: 12}, // Note: Duplicate 'cold'
+            { arabic: "حَارٌّ", english: "hot (m)", level: 12}, // Note: Duplicate 'hot'
+            { arabic: "جَالِسٌ", english: "sitting (m)", level: 12}, // Note: Duplicate 'sitting'
+            { arabic: "وَاقِفٌ", english: "standing (m)", level: 12}, // Note: Duplicate 'standing'
+            { arabic: "مَرِيضٌ", english: "sick (m)", level: 12}, // Note: Duplicate 'sick'
+            { arabic: "حُلْوٌ", english: "sweet (m)", level: 12}, // Note: Duplicate 'sweet'
+            { arabic: "لَذِيذٌ", english: "delicious (m)", level: 12}, // Note: Duplicate 'delicious'
+            { arabic: "خَفِيفٌ", english: "light (weight) (m)", level: 12}, // Note: Duplicate 'light (weight)'
+            { arabic: "ثَقِيلٌ", english: "heavy (m)", level: 12}, // Note: Duplicate 'heavy'
+            { arabic: "مَكْسُورٌ", english: "broken (m)", level: 12}, // Note: Duplicate 'broken'
+            { arabic: "مَفْتُوحٌ", english: "open (m)", level: 12}, // Note: Duplicate 'open'
+            { arabic: "مُغْلَقٌ", english: "closed (m)", level: 12}, // Note: Duplicate 'closed'
+            { arabic: "قَدِيمٌ", english: "old (m)", level: 12}, // Note: Duplicate 'old'
+            { arabic: "سَهْلٌ", english: "easy (m)", level: 12},
+            { arabic: "صَعْبٌ", english: "difficult (m)", level: 12},
+            { arabic: "شَهِيرٌ", english: "famous (m)", level: 12},
+            { arabic: "حَادٌّ", english: "sharp", level: 12},
+            { arabic: "أَحْمَرُ", english: "red (m)", level: 12},
+            { arabic: "أَزْرَقُ", english: "blue (m)", level: 12},
+            { arabic: "أَخْضَرُ", english: "green (m)", level: 13},
+            { arabic: "أَسْوَدُ", english: "black (m)", level: 13},
+            { arabic: "أَصْفَرُ", english: "yellow (m)", level: 13},
+            { arabic: "أَبْيَضُ", english: "white (m)", level: 13},
+            { arabic: "حَمْرَاءُ", english: "red (f)", level: 13},
+            { arabic: "زَرْقَاءُ", english: "blue (f)", level: 13},
+            { arabic: "خَضْرَاءُ", english: "green (f)", level: 13},
+            { arabic: "سَوْدَاءُ", english: "black (f)", level: 13},
+            { arabic: "صَفْرَاءُ", english: "yellow (f)", level: 13},
+            { arabic: "بَيْضَاءُ", english: "white (f)", level: 13},
+            { arabic: "أَعْوَرُ", english: "one-eyed (m)", level: 13},
+            { arabic: "مَدْرَسَةٌ", english: "school", level: 13},
+            { arabic: "مَدَارِسُ", english: "schools", level: 13},
+            { arabic: "سُوقٌ", english: "market", level: 13},
+            { arabic: "أَسْوَاقٌ", english: "markets", level: 13},
+            { arabic: "اَلْيَابَانُ", english: "Japan", level: 13},
+            { arabic: "اَلصِّينُ", english: "China", level: 13},
+            { arabic: "اَلْهِنْدُ", english: "India", level: 13},
+            { arabic: "اَلْفِلِبِّينُ", english: "Philippines", level: 13},
+            { arabic: "إِنْدُونِيسِيَا", english: "Indonesia", level: 13},
+            { arabic: "مَكَّةُ", english: "Makkah", level: 13},
+            { arabic: "جِدَّةُ", english: "Jeddah", level: 13},
+            { arabic: "اَلرِّيَاضُ", english: "Riyadh", level: 13},
+            { arabic: "اَلْكُوَيْتُ", english: "Kuwait", level: 13},
+            { arabic: "مِصْرُ", english: "Egypt", level: 13},
+            { arabic: "اَلْمَدِينَةُالْمُنَوَّرَةُ", english: "Madinah", level: 13},
+            { arabic: "أَمْرِيكَا", english: "America", level: 13},
+            { arabic: "إِيرَانُ", english: "Iran", level: 14},
+            { arabic: "سُورِيَا", english: "Syria", level: 14},
+            { arabic: "إِنْكَلْتَرَا", english: "England", level: 14},
+            { arabic: "سُوِيسْرَا", english: "Switzerland", level: 14},
+            { arabic: "أَلْمَانِيَا", english: "Germany", level: 14},
+            { arabic: "فَرَنْسَا", english: "France", level: 14},
+            { arabic: "اَلْعِرَاقُ", english: "Iraq", level: 14},
+            { arabic: "مُسْتَشْفَى", english: "hospital", level: 14},
+            { arabic: "مُسْتَشْفَيَاتٌ", english: "hospitals", level: 14},
+            { arabic: "مُسْتَوْصَفٌ", english: "clinic", level: 14},
+            { arabic: "مُسْتَوْصَفَاتٌ", english: "clinics", level: 14},
+            { arabic: "اَلْمَدْرَسَةُالاِبْتِدَائِيَّةُ", english: "primary school", level: 14},
+            { arabic: "اَلْمَدْرَسَةُالْمُتَوَسِّطَةُ", english: "middle school", level: 14},
+            { arabic: "اَلْمَدْرَسَةُالثَّانَوِيَّةُ", english: "secondary school", level: 14},
+            { arabic: "اَلْمَمْلَكَةُالْعَرَبِيَّةُالسُّعُودِيَّةُ", english: "Kingdom of Saudi Arabia", level: 14},
+            { arabic: "وَزِيرٌ", english: "minister", level: 14},
+            { arabic: "وُزَرَاءُ", english: "ministers", level: 14},
+            { arabic: "شَرِكَةٌ", english: "company", level: 14},
+            { arabic: "شَرِكَاتٌ", english: "companies", level: 14},
+            { arabic: "مُدِيرُالشَّرِكَةِ", english: "company director", level: 14},
+            { arabic: "مُفَتِّشٌ", english: "inspector", level: 14},
+            { arabic: "مُفَتِّشُونَ", english: "inspectors", level: 14},
+            { arabic: "رَأْسٌ", english: "head", level: 14}, // Note: Duplicate 'head'
+            { arabic: "رُؤُوسٌ", english: "heads", level: 14},
+            { arabic: "عَيْنٌ", english: "eye", level: 14}, // Note: Duplicate 'eye'
+            { arabic: "أَعْيُنٌ", english: "eyes", level: 14},
+            { arabic: "أَنْفٌ", english: "nose", level: 14},
+            { arabic: "أُنُوفٌ", english: "noses", level: 15},
+            { arabic: "فَمٌ", english: "mouth", level: 15}, // Note: Duplicate 'mouth'
+            { arabic: "أَفْوَاهٌ", english: "mouths", level: 15},
+            { arabic: "أُذُنٌ", english: "ear", level: 15},
+            { arabic: "آذَانٌ", english: "ears", level: 15},
+            { arabic: "يَدٌ", english: "hand", level: 15}, // Note: Duplicate 'hand'
+            { arabic: "أَيْدٍ", english: "hands", level: 15},
+            { arabic: "رِجْلٌ", english: "leg, foot", level: 15},
+            { arabic: "أَرْجُلٌ", english: "legs, feet", level: 15},
+            { arabic: "قَلْبٌ", english: "heart", level: 15},
+            { arabic: "قُلُوبٌ", english: "hearts", level: 15},
+            { arabic: "إِصْبَعٌ", english: "finger", level: 15}, // Note: Duplicate 'finger'
+            { arabic: "أَصَابِعُ", english: "fingers", level: 15},
+            { arabic: "ظُفْرٌ", english: "nail", level: 15}, // Note: Duplicate 'nail'
+            { arabic: "أَظْفَارٌ", english: "nails", level: 15},
+            { arabic: "لُغَةٌ", english: "language", level: 15},
+            { arabic: "لُغَاتٌ", english: "languages", level: 15},
+            { arabic: "اَللُّغَةُالْعَرَبِيَّةُ", english: "Arabic language", level: 15},
+            { arabic: "اَللُّغَةُالإِنْجِلِيزِيَّةُ", english: "English language", level: 15},
+            { arabic: "اَللُّغَةُالْفَرَنْسِيَّةُ", english: "French language", level: 15},
+            { arabic: "اَللُّغَةُالأُرْدِيَّةُ", english: "Urdu language", level: 15},
+            { arabic: "اَللُّغَةُالْيَابَانِيَّةُ", english: "Japanese language", level: 15},
+            { arabic: "قُرْآنٌ", english: "Qur'an", level: 15}, // Note: Duplicate 'Qur'an'
+            { arabic: "صَلاَةٌ", english: "prayer", level: 15}, // Note: Duplicate 'prayer'
+            { arabic: "اَلْكَعْبَةُ", english: "Ka'bah", level: 15}, // Note: Duplicate 'Ka'bah'
+            { arabic: "اَلْقِبْلَةُ", english: "direction of prayer", level: 15},
+            { arabic: "اَلأَذَانُ", english: "call to prayer", level: 15},
+            { arabic: "مُؤَذِّنٌ", english: "caller to prayer", level: 15},
+            { arabic: "مُؤَذِّنُونَ", english: "callers to prayer", level: 15},
+            { arabic: "اَلْفَجْرُ", english: "dawn", level: 15}, // Note: Duplicate 'dawn'
+            { arabic: "اَلظُّهْرُ", english: "noon", level: 15}, // Note: Duplicate 'noon'
+            { arabic: "اَلْعَصْرُ", english: "afternoon", level: 15}, // Note: Duplicate 'afternoon'
+            { arabic: "اَلْمَغْرِبُ", english: "sunset", level: 15}, // Note: Duplicate 'sunset'
+            { arabic: "اَلْعِشَاءُ", english: "night", level: 15}, // Note: Duplicate 'night'
+            { arabic: "اَللهُ", english: "Allah", level: 15},
+            { arabic: "اَلنَّبِيُّ", english: "Prophet", level: 15},
+            { arabic: "اَلرَّسُولُ", english: "Messenger", level: 15}, // Note: Duplicate 'Messenger'
+            { arabic: "اَلسَّيِّدُ", english: "Mr., master", level: 15},
+            { arabic: "اَلسَّيِّدَةُ", english: "Mrs., mistress", level: 15},
+            { arabic: "اَلشَّمْسُ", english: "sun", level: 15}, // Note: Duplicate 'sun'
+            { arabic: "اَلْقَمَرُ", english: "moon", level: 15}, // Note: Duplicate 'moon'
+            { arabic: "اَلنَّجْمُ", english: "star", level: 15}, // Note: Duplicate 'star'
+            { arabic: "اَلنُّجُومُ", english: "stars", level: 15},
+            { arabic: "اَلسَّمَاءُ", english: "sky", level: 15}, // Note: Duplicate 'sky'
+            { arabic: "اَلْهَوَاءُ", english: "air", level: 15}, // Note: Duplicate 'air' -> 'wind'
+            { arabic: "اَلْمَاءُ", english: "water", level: 15}, // Note: Duplicate 'water'
+            { arabic: "اَلْوَرَقُ", english: "paper", level: 15}, // Note: Duplicate 'paper'
+            { arabic: "اَللَّحْمُ", english: "meat", level: 15}, // Note: Duplicate 'meat'
+            { arabic: "اَلْخُبْزُ", english: "bread", level: 15}, // Note: Duplicate 'bread'
+            { arabic: "اَللَّبَنُ", english: "milk", level: 15}, // Note: Duplicate 'milk' -> 'milk/yogurt'
+            { arabic: "اَلسُّكَّرُ", english: "sugar", level: 15}, // Note: Duplicate 'sugar'
+            { arabic: "اَلصَّابُونُ", english: "soap", level: 15}, // Note: Duplicate 'soap'
+            { arabic: "اَلْحَجَرُ", english: "stone", level: 15}, // Note: Duplicate 'stone' -> 'rock'
+            { arabic: "اَلْحِصَانُ", english: "horse", level: 15}, // Note: Duplicate 'horse'
+            { arabic: "اَلْحِمَارُ", english: "donkey", level: 15}, // Note: Duplicate 'donkey'
+            { arabic: "اَلْكَلْبُ", english: "dog", level: 15}, // Note: Duplicate 'dog'
+            { arabic: "اَلْقِطُّ", english: "cat", level: 15}, // Note: Duplicate 'cat'
+            { arabic: "اَلدِّيكُ", english: "rooster", level: 15}, // Note: Duplicate 'rooster'
+            { arabic: "اَلدَّجَاجَةُ", english: "hen", level: 15},
+            { arabic: "اَلْبَيْضَةُ", english: "egg", level: 15},
+            { arabic: "اَلْبَقَرَةُ", english: "cow", level: 15},
+            { arabic: "اَلْجَمَلُ", english: "camel", level: 15}, // Note: Duplicate 'camel'
+            { arabic: "اَلنَّاقَةُ", english: "she-camel", level: 15},
+            { arabic: "اَلسَّمَكُ", english: "fish", level: 15}, // Note: Duplicate 'fish'
+            { arabic: "اَلضَّيْفُ", english: "guest", level: 15}, // Note: Duplicate 'guest'
+            { arabic: "اَلْفَاكِهَةُ", english: "fruit", level: 15},
+            { arabic: "اَلتُّفَّاحُ", english: "apple", level: 15}, // Note: Duplicate 'apple'
+            { arabic: "اَلزَّهْرَةُ", english: "flower", level: 15}, // Note: Duplicate 'flower'
+            { arabic: "اَلشَّجَرَةُ", english: "tree", level: 15}, // Note: Duplicate 'tree'
+            { arabic: "اَلْعُصْفُورُ", english: "sparrow", level: 15},
+            { arabic: "اَلطَّائِرُ", english: "bird", level: 15},
+            { arabic: "اَلْبَطَّةُ", english: "duck", level: 15},
+            { arabic: "اَلطَّاوُوسُ", english: "peacock", level: 15},
+            { arabic: "اَلْغُرَابُ", english: "crow", level: 15},
+            { arabic: "اَلْحَمَامَةُ", english: "pigeon", level: 15},
+            { arabic: "اَلْيَوْمُ", english: "today, day", level: 15},
+            { arabic: "أَمْسِ", english: "yesterday", level: 15},
+            { arabic: "غَدًا", english: "tomorrow", level: 15},
+            { arabic: "اَلأُسْبُوعُ", english: "week", level: 15},
+            { arabic: "اَلشَّهْرُ", english: "month", level: 15},
+            { arabic: "اَلسَّنَةُ", english: "year", level: 15},
+            { arabic: "اَلآنَ", english: "now", level: 15},
+            { arabic: "قَبْلَ", english: "before", level: 15},
+            { arabic: "بَعْدَ", english: "after", level: 15},
+            { arabic: "مَتَى", english: "when", level: 15},
+            { arabic: "كَيْفَ", english: "how", level: 15},
+            { arabic: "كَمْ", english: "how many, how much", level: 15},
+            { arabic: "بِكَمْ", english: "how much (price)", level: 15},
+            { arabic: "أَيْنَ", english: "where", level: 15}, // Note: Duplicate 'where'
+            { arabic: "مِنْأَيْنَ", english: "from where", level: 15},
+            { arabic: "إِلَىأَيْنَ", english: "to where", level: 15},
+            { arabic: "هُنَا", english: "here", level: 15},
+            { arabic: "هُنَاكَ", english: "there", level: 15},
+            { arabic: "مَعَ", english: "with", level: 15},
+            { arabic: "عِنْدَ", english: "with, have", level: 15},
+            { arabic: "لِـ", english: "for, have", level: 15},
+            { arabic: "بِـ", english: "in, at, with", level: 15},
+            { arabic: "كَـ", english: "like, as", level: 15},
+            { arabic: "عَلَى", english: "on", level: 15}, // Note: Duplicate 'on'
+            { arabic: "تَحْتَ", english: "under", level: 15},
+            { arabic: "أَمَامَ", english: "in front of", level: 15},
+            { arabic: "خَلْفَ", english: "behind", level: 15},
+            { arabic: "فَوْقَ", english: "above", level: 15},
+            { arabic: "مِنْ", english: "from", level: 15}, // Note: Duplicate 'from'
+            { arabic: "إِلَى", english: "to", level: 15}, // Note: Duplicate 'to'
+            { arabic: "فِي", english: "in", level: 15}, // Note: Duplicate 'in'
+            { arabic: "وَ", english: "and", level: 15},
+            { arabic: "أَوْ", english: "or", level: 15},
+            { arabic: "ثُمَّ", english: "then", level: 15},
+            { arabic: "يَا", english: "O (vocative particle)", level: 15},
+            { arabic: "أَيْضًا", english: "also", level: 15},
+            { arabic: "جِدًّا", english: "very", level: 15},
+            { arabic: "اَلْحَمْدُلِلَّهِ", english: "Praise be to Allah", level: 15},
+            { arabic: "مَاشَاءَاَللهُ", english: "What Allah wills", level: 15},
+            { arabic: "سُبْحَانَاَللهِ", english: "Glory be to Allah", level: 15},
+            { arabic: "اَلسَّلاَمُعَلَيْكُمْ", english: "Peace be upon you", level: 15},
+            { arabic: "وَعَلَيْكُمُالسَّلاَمُ", english: "And upon you be peace", level: 15},
+            { arabic: "أَهْلاًوَسَهْلاًوَمَرْحَبًا", english: "Welcome", level: 15},
+            { arabic: "كَيْفَحَالُكَ؟", english: "How are you? (m)", level: 15},
+            { arabic: "كَيْفَحَالُكِ؟", english: "How are you? (f)", level: 15},
+            { arabic: "أَنَابِخَيْرٍ", english: "I am fine", level: 15},
+            { arabic: "شُكْرًا", english: "Thank you", level: 15},
+            { arabic: "عَفْوًا", english: "You're welcome", level: 15},
+            { arabic: "آسِفٌ", english: "Sorry", level: 15},
+            { arabic: "مِنْفَضْلِكَ", english: "Please (m)", level: 15},
+            { arabic: "مِنْفَضْلِكِ", english: "Please (f)", level: 15},
+            { arabic: "مَااِسْمُكَ؟", english: "What is your name? (m)", level: 15},
+            { arabic: "مَااِسْمُكِ؟", english: "What is your name? (f)", level: 15},
+            { arabic: "اِسْمِي...", english: "My name is...", level: 15},
+            { arabic: "تَشَرَّفْنَا", english: "Nice to meet you", level: 15},
+            { arabic: "مَعَالسَّلاَمَةِ", english: "Goodbye", level: 15},
+            { arabic: "إِلَىاللِّقَاءِ", english: "See you later", level: 15}
+        ];
+        // --- End Vocabulary Data ---
+
+        // --- Assign IDs, Colors, and Image Refs ---
+        const baseColors = ["#FF6347", "#4682B4", "#DAA520", "#8B4513", "#A0522D", "#ADD8E6", "#228B22", "#D2B48C", "#DC143C", "#00008B", "#008000", "#808080", "#C71585", "#48D1CC", "#FF8C00"]; // Added more colors
+        const vocabulary = vocabulary_raw.map((word, index) => ({
+            ...word,
+            id: `word${String(index + 1).padStart(3, '0')}`,
+            visual_ref: `https://placehold.co/${collectibleWidth}x${collectibleHeight}/${baseColors[index % baseColors.length].substring(1)}/FFF?text=${encodeURIComponent(word.english.split(' ')[0])}`, // Use first word for placeholder
+            color: baseColors[index % baseColors.length]
+        }));
+
+
+        let currentVocabulary = [];
+        let recentlyCollectedWords = [];
+        let lastSpawnedWordId = null;
+
+        // --- Asset Loading ---
+        let images = {}; // For collectibles
+        let assetsLoaded = false; // Track if assets are successfully loaded
+        let homeBackgroundImage = null;
+        // Store all loaded player sprites
+        let playerSprites = {
+            suit: { run: null }, // Removed slide property
+            thobe: { run: null },
+            baller: { run: null }
+        };
+        let selectedCharacterSprite = 'suit'; // Default character sprite identifier
+
+        // --- Player Sprite Configuration ---
+        const playerFrameWidth = 163; // Width of a single frame in run sprite
+        const playerFrameHeight = 195; // Height of a single frame in run sprite
+        const playerRunFrames = 3; // Number of running frames (0, 1, 2)
+        const playerAnimationInterval = 8; // Frames per sprite change (for running)
+        let playerAnimationFrame = 0; // Current frame index for running animation
+        let playerAnimationTimer = 0;
+        const playerDrawScale = 0.4; // Adjusted scale
+        const playerDrawWidth = playerFrameWidth * playerDrawScale;
+        const playerDrawHeight = playerFrameHeight * playerDrawScale;
+        // Active sprites used in game
+        let currentPlayerRunSprite = null;
+        // Removed currentPlayerSlideSprite
+
+        function loadImageAsset(src, isCritical = false) { // Added isCritical flag
+             return new Promise((resolve) => { // Always resolve
+                 const img = new Image();
+                 img.onload = () => resolve(img);
+                 img.onerror = (err) => {
+                     console.error(`Failed to load image: ${src}`, err);
+                     if (isCritical) {
+                         console.error("CRITICAL ASSET FAILED TO LOAD:", src);
+                     }
+                     resolve(null); // Resolve with null on error
+                 };
+                 img.src = src;
+             });
+        }
+
+        function loadCollectibleImage(wordData) {
+             return loadImageAsset(wordData.visual_ref); // Use the general loader
+        }
+
+        async function preloadAssets() {
+             console.log("Preloading assets...");
+             loadingMessage.style.display = 'block';
+             startButton.disabled = true; // Disable start button during load
+
+             const vocabImagePromises = vocabulary.map(wordData => loadCollectibleImage(wordData));
+             const homeBgPromise = loadImageAsset('assets/home_background.png'); // Load home background
+
+             // --- Load ALL character RUN sprites ---
+             const spriteTypes = ['suit', 'thobe', 'baller'];
+             const playerSpritePromises = [];
+             spriteTypes.forEach(type => {
+                 playerSpritePromises.push(loadImageAsset(`assets/run_${type}.png`, true).then(img => playerSprites[type].run = img));
+                 // Removed loading for slide sprites
+             });
+             // --- End loading character sprites ---
+
+             // Wait for all images (vocab, background, all player run sprites)
+             const [loadedHomeBg, ...loadedVocabImages] = await Promise.all([homeBgPromise, ...vocabImagePromises]);
+             await Promise.all(playerSpritePromises); // Wait for player sprites specifically
+
+             homeBackgroundImage = loadedHomeBg;
+             if (homeBackgroundImage) {
+                 mainMenu.style.backgroundImage = `url(${homeBackgroundImage.src})`;
+             } else {
+                 console.warn("Home background failed to load.");
+             }
+
+             // Check if ANY critical player run sprites failed
+             let criticalFailure = false;
+             spriteTypes.forEach(type => {
+                 if (!playerSprites[type].run) { // <<< Only check run sprite
+                     console.error(`CRITICAL ERROR: Failed to load run sprite for character type '${type}'!`);
+                     criticalFailure = true;
+                 }
+             });
+
+             if (criticalFailure) {
+                 loadingMessage.innerText = "Error: Core character sprites failed. Cannot start.";
+                 loadingMessage.style.color = "red";
+                 assetsLoaded = false;
+                 return; // Stop further execution
+             }
+
+             assetsLoaded = true;
+             console.log("Assets loaded successfully!");
+             loadingMessage.style.display = 'none';
+             startButton.disabled = false; // Re-enable start button
+        }
+
+        // --- Speech Synthesis ---
+        const synth = window.speechSynthesis;
+        let arabicVoice = null;
+
+        function findArabicVoice() { /* ... findArabicVoice logic ... */
+            const voices = synth.getVoices();
+            if (voices.length === 0 && synth.onvoiceschanged !== undefined) { return; }
+            arabicVoice = voices.find(voice => voice.lang.startsWith('ar')) || voices.find(voice => voice.name.toLowerCase().includes('arabic'));
+        }
+        if (synth.onvoiceschanged !== undefined) { synth.onvoiceschanged = findArabicVoice; } findArabicVoice();
+
+        function speakText(text, langCode) { /* ... speakText logic ... */
+            if (!synth) { console.error("Speech Synthesis not supported."); return; }
+            if (synth.speaking) { synth.cancel(); }
+             findArabicVoice();
+            const utterance = new SpeechSynthesisUtterance(text); utterance.lang = langCode;
+            if (langCode.startsWith('ar') && arabicVoice) { utterance.voice = arabicVoice; }
+            else if (langCode.startsWith('en')) { const englishVoice = synth.getVoices().find(voice => voice.lang.startsWith('en') && voice.default); if (englishVoice) utterance.voice = englishVoice; }
+            utterance.pitch = 1; utterance.rate = 1;
+            utterance.onerror = (event) => { console.error(`SpeechSynthesisUtterance Error: ${event.error}`); };
+            synth.speak(utterance);
+        }
+
+
+        // --- Game State Variables ---
+        let score = 0; let lives = 3; let gameSpeed = BASE_GAME_SPEED; let isGameOver = false; let isPaused = false;
+        let playerLane = 1; let canvasWidth; let canvasHeight;
+        let playerBaseY; let playerCurrentY; let playerX; let animationFrameId = null;
+        let currentPhase = 'collecting';
+        let currentLevel = 1; let gatesPassed = 0;
+
+        // --- Player Character State ---
+        let isJumping = false; let isSliding = false;
+        let currentYVelocity = 0; // Pixels per frame
+        let slideTimer = 0; // Frames
+
+        // --- Player Hitbox Configuration ---
+        const playerHitboxWidthFactor = 0.6;
+        const playerHitboxHeightFactor = 0.7; // Adjusted based on DRAWN size
+        const playerHitboxBottomOffset = 5;
+        const playerHitboxTopOffsetFactor = 0.15; // Adjusted based on DRAWN size
+        const playerSlidingHitboxHeightFactor = 0.5; // Make hitbox shorter when sliding
+
+        // --- Collectible & Animation Variables ---
+        let activeCollectibles = []; let activeAnimations = [];
+        let spawnTimer = 0; // Frames
+
+        // --- Obstacle Variables ---
+        let activeObstacles = [];
+        const obstacleWidth = 50; const obstacleHeight = 50; const lowObstacleHeight = 30;
+        const highObstacleYOffset = 60; const highObstacleHeight = 60;
+        const highObstacleTopBarHeightFactor = 0.3; // Define factor for collision check
+        let obstacleSpawnTimer = 0; // Frames
+        let lastObstacleLane = -1;
+
+        // --- Gate Variables ---
+        let gateActive = false; let gateY = -200; let gateHeight = 150;
+        let promptHeight = 50; let doorHeight = gateHeight - promptHeight;
+        let gatePromptWord = null; let gateOptions = [];
+        let gateCollisionChecked = false; // Flag to prevent multiple checks per gate
+
+        // --- Touch Input Variables ---
+        let touchStartX = 0; let touchStartY = 0; let touchEndX = 0; let touchEndY = 0;
+
+        // --- Utility Functions ---
+        function shuffleArray(array) { /* ... shuffle logic ... */
+             for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; } return array;
+        }
+
+        // --- Feedback Flash ---
+        function showFeedback(type) { /* ... showFeedback logic ... */
+             feedbackFlash.className = `feedback-flash ${type} visible`; setTimeout(() => { feedbackFlash.className = 'feedback-flash'; }, 200);
+        }
+
+        // --- Pause/Resume ---
+        function togglePause() { /* ... togglePause logic ... */
+            isPaused = !isPaused;
+            if (isPaused) { cancelAnimationFrame(animationFrameId); animationFrameId = null; pauseOverlay.style.display = 'block'; pauseButton.textContent = '▶'; synth.pause(); }
+            else { pauseOverlay.style.display = 'none'; pauseButton.textContent = '❚❚'; synth.resume(); if (!isGameOver) { gameLoop(); } }
+        }
+
+        // --- Level Management & Theming ---
+        // <<< MOVED levelThemes definition HERE, before it's used >>>
+        const levelThemes = {
+            1: { background: 'linear-gradient(to bottom, #a0a0a0, #c0c0c0)', laneColor: 'rgba(255, 255, 255, 0.6)' }, // Default Grey Road
+            2: { background: 'linear-gradient(to bottom, #f5dca4, #e4b970)', laneColor: 'rgba(80, 50, 20, 0.5)' }, // Sandy Desert
+            3: { background: 'linear-gradient(to bottom, #90ee90, #55a355)', laneColor: 'rgba(255, 255, 255, 0.7)' }, // Lush Garden
+            4: { background: 'linear-gradient(to bottom, #add8e6, #87ceeb)', laneColor: 'rgba(0, 0, 100, 0.4)' },   // Light Blue Sky
+            5: { background: 'linear-gradient(to bottom, #d3d3d3, #a9a9a9)', laneColor: 'rgba(50, 50, 50, 0.6)' },   // City Grey
+            6: { background: 'linear-gradient(to bottom, #ffebcd, #deb887)', laneColor: 'rgba(100, 60, 20, 0.5)' }, // Blanched Almond / Burlywood
+            7: { background: 'linear-gradient(to bottom, #e0ffff, #afeeee)', laneColor: 'rgba(0, 100, 100, 0.4)' }, // Light Cyan / Pale Turquoise
+            8: { background: 'linear-gradient(to bottom, #fffacd, #eee8aa)', laneColor: 'rgba(150, 150, 50, 0.5)' }, // Lemon Chiffon / Pale Goldenrod
+            9: { background: 'linear-gradient(to bottom, #f0fff0, #98fb98)', laneColor: 'rgba(0, 100, 0, 0.5)' },   // Honeydew / Pale Green
+            10:{ background: 'linear-gradient(to bottom, #fff0f5, #ffe4e1)', laneColor: 'rgba(150, 50, 50, 0.4)' }, // Lavender Blush / Misty Rose
+            11:{ background: 'linear-gradient(to bottom, #87cefa, #00bfff)', laneColor: 'rgba(0, 0, 150, 0.5)' }, // Light Sky Blue / Deep Sky Blue
+            12:{ background: 'linear-gradient(to bottom, #f5f5dc, #f5deb3)', laneColor: 'rgba(100, 80, 50, 0.5)' }, // Beige / Wheat
+            13:{ background: 'linear-gradient(to bottom, #f0f8ff, #e6e6fa)', laneColor: 'rgba(50, 50, 150, 0.4)' }, // Alice Blue / Lavender
+            14:{ background: 'linear-gradient(to bottom, #fafad2, #fff8dc)', laneColor: 'rgba(150, 140, 50, 0.5)' }, // Light Goldenrod Yellow / Cornsilk
+            15:{ background: 'linear-gradient(to bottom, #b0c4de, #778899)', laneColor: 'rgba(40, 40, 60, 0.6)' }  // Light Steel Blue / Light Slate Gray
+        };
+        let currentLaneColor = levelThemes[1].laneColor; // Initialize after definition
+
+        function updateTheme(level) { /* ... updateTheme logic ... */
+            const themeLevel = Math.min(level, MAX_LEVEL);
+            const theme = levelThemes[themeLevel] || levelThemes[1];
+            canvas.style.background = theme.background; currentLaneColor = theme.laneColor;
+        }
+        function updateCurrentVocabulary() { /* ... updateCurrentVocabulary logic ... */
+            currentVocabulary = vocabulary.filter(word => word.level <= currentLevel);
+        }
+        function levelUp() { /* ... levelUp logic ... */
+            if (currentLevel < MAX_LEVEL) { currentLevel++; gameSpeed = Math.min(MAX_GAME_SPEED, BASE_GAME_SPEED + (currentLevel - 1) * SPEED_INCREMENT); updateCurrentVocabulary(); updateTheme(currentLevel); updateUI(); }
+            else { gameSpeed = Math.min(MAX_GAME_SPEED + 2, gameSpeed + SPEED_INCREMENT / 2); }
+        }
+
+         // --- Character Selection Handler ---
+         characterOptions.forEach(option => {
+             option.addEventListener('click', () => {
+                 characterOptions.forEach(opt => opt.classList.remove('selected'));
+                 option.classList.add('selected');
+                 selectedCharacterSprite = option.getAttribute('data-sprite'); // Store the sprite identifier
+                 console.log("Selected character sprite:", selectedCharacterSprite);
+             });
+         });
+
+
+        // --- Game Initialization ---
+        function setupGame() {
+            resizeCanvas(); // Sets canvasWidth, canvasHeight
+            playerBaseY = 30; // Ground position from bottom
+            playerCurrentY = playerBaseY; // Start on the ground
+            calculatePlayerX(); // Sets playerX based on lane
+
+            // <<< Set the active run sprite based on selection >>>
+            currentPlayerRunSprite = playerSprites[selectedCharacterSprite]?.run;
+
+            score = 0; lives = 3; playerLane = 1; isGameOver = false; isPaused = false;
+            currentLevel = 1; gatesPassed = 0; gameSpeed = BASE_GAME_SPEED;
+            updateCurrentVocabulary();
+            updateTheme(currentLevel);
+            activeCollectibles = []; activeObstacles = []; activeAnimations = [];
+            recentlyCollectedWords = [];
+            spawnTimer = spawnInterval; obstacleSpawnTimer = Math.floor(obstacleSpawnInterval / 2);
+            currentPhase = 'collecting';
+            gateActive = false; gatePromptWord = null; gateOptions = []; gateCollisionChecked = false;
+            lastSpawnedWordId = null; lastObstacleLane = -1;
+            isJumping = false; isSliding = false; currentYVelocity = 0; slideTimer = 0;
+            playerAnimationFrame = 0; playerAnimationTimer = 0; // Reset animation state
+
+            updateUI();
+            messageBox.style.display = 'none'; pauseOverlay.style.display = 'none'; pauseButton.textContent = '❚❚';
+            synth.cancel();
+        }
+
+        // --- Start Game ---
+         function startGame() {
+             // Preload assets specifically for the selected character BEFORE starting
+             preloadAssets().then(() => {
+                 // Ensure assets actually loaded before proceeding
+                 if (!assetsLoaded) {
+                     console.error("Cannot start game: Assets not preloaded or failed critically.");
+                     loadingMessage.innerText = "Error loading assets. Please refresh.";
+                     loadingMessage.style.color = "red";
+                     loadingMessage.style.display = 'block';
+                     startButton.disabled = true;
+                     return;
+                 }
+                 // <<< Check only the run sprite for the selected character >>>
+                 if (!playerSprites[selectedCharacterSprite]?.run) {
+                      console.error(`Cannot start game: Run sprite for selected character '${selectedCharacterSprite}' missing.`);
+                      loadingMessage.innerText = `Error: Run sprite for ${selectedCharacterSprite} missing.`;
+                      loadingMessage.style.color = "red";
+                      loadingMessage.style.display = 'block';
+                      startButton.disabled = true;
+                      return;
+                 }
+
+                 // Assets loaded, proceed with game start
+                 mainMenu.style.display = 'none';
+                 gameContainer.style.display = 'block';
+                 uiContainer.style.display = 'flex';
+                 findArabicVoice();
+                 setupGame(); // Setup game state AFTER assets are confirmed loaded
+                 gameLoop();
+             }).catch(error => {
+                 console.error("Error during preloadAssets:", error);
+                 loadingMessage.innerText = "Error loading game assets.";
+                 loadingMessage.style.color = "red";
+                 loadingMessage.style.display = 'block';
+                 startButton.disabled = true;
+             });
+         }
+
+
+        // --- Canvas Resizing ---
+        function resizeCanvas() {
+            // Use the actual inner dimensions of the window
+            const availableHeight = window.innerHeight;
+            const availableWidth = window.innerWidth;
+
+            // Set canvas dimensions to fill available space
+            // You might subtract a small amount for margins if desired, e.g., availableWidth * 0.98
+            let newWidth = availableWidth;
+            let newHeight = availableHeight;
+
+            // Apply dimensions to canvas
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+            canvasWidth = canvas.width;
+            canvasHeight = canvas.height;
+
+            // Match game container size to canvas size exactly
+            gameContainer.style.width = `${canvasWidth}px`;
+            gameContainer.style.height = `${canvasHeight}px`;
+
+            // Recalculate player base Y and X based on new dimensions
+            playerBaseY = 30; // Keep player near bottom
+            playerCurrentY = isJumping ? playerCurrentY : playerBaseY; // Maintain jump height if resizing mid-jump
+            calculatePlayerX(); // Recalculate horizontal position
+
+            // Update UI container max-width relative to canvas
+            uiContainer.style.maxWidth = `${canvasWidth * 0.95}px`; // Keep UI constrained
+
+            // Update player's visual position immediately after resize
+             if (typeof updatePlayerState === 'function') {
+                 updatePlayerState();
+             } else if (typeof calculatePlayerX === 'function') {
+                 // Ensure player X is recalculated AND visually updated if possible
+                 // calculatePlayerX(); // Already called above
+             }
+
+            console.log(`Resized Canvas to: ${canvasWidth} x ${canvasHeight}`);
+        }
+
+
+        // --- Player Position & State ---
+        function calculatePlayerX() {
+            const laneWidth = canvasWidth / 3; const laneCenter = laneWidth / 2;
+            playerX = (playerLane * laneWidth) + laneCenter - (playerDrawWidth / 2);
+        }
+        function updatePlayerState() { /* ... update jump/slide state (frame-based) ... */
+             if (isSliding) { slideTimer--; if (slideTimer <= 0) { isSliding = false; } }
+             if (isJumping) {
+                playerCurrentY += currentYVelocity; currentYVelocity -= gravity;
+                if (playerCurrentY <= playerBaseY) { playerCurrentY = playerBaseY; isJumping = false; currentYVelocity = 0; }
+             }
+        }
+        function startJump() { /* ... start jump ... */
+             if (!isJumping && !isSliding) { isJumping = true; currentYVelocity = jumpVelocity; }
+        }
+        function startSlide() { /* ... start slide ... */
+             if (!isJumping && !isSliding) { isSliding = true; slideTimer = slideDuration; }
+        }
+
+
+        // --- Drawing Functions ---
+        function drawEnvironment() { /* ... draw lanes ... */
+             ctx.strokeStyle = currentLaneColor; ctx.lineWidth = 5; ctx.beginPath();
+             ctx.moveTo(canvasWidth / 3, 0); ctx.lineTo(canvasWidth / 3, canvasHeight);
+             ctx.moveTo(2 * canvasWidth / 3, 0); ctx.lineTo(2 * canvasWidth / 3, canvasHeight);
+             ctx.stroke();
+        }
+        function drawCollectibles() { /* ... draw collectibles ... */
+            const arabicFontSize = 36; const englishFontSize = 20; const textPadding = 5; const englishYOffset = -15;
+            activeCollectibles.forEach(item => {
+                if (activeAnimations.some(anim => anim.id === item.id)) return;
+                const img = images[item.data.id]; const imgHeight = collectibleHeight * 0.55; const imgWidth = collectibleWidth * 0.8;
+                // Draw English Text (Above the Box)
+                ctx.fillStyle = '#FFFFFF'; ctx.font = `bold ${englishFontSize}px 'Inter', sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)'; ctx.lineWidth = 4;
+                ctx.strokeText(item.data.english, item.x + collectibleWidth / 2, item.y + englishYOffset);
+                ctx.fillText(item.data.english, item.x + collectibleWidth / 2, item.y + englishYOffset);
+                // Draw Image/Fallback Color Box
+                if (img) { const imgX = item.x + (collectibleWidth - imgWidth) / 2; const imgY = item.y + textPadding; ctx.drawImage(img, imgX, imgY, imgWidth, imgHeight); }
+                else { ctx.fillStyle = item.data.color || '#FFFFFF'; ctx.fillRect(item.x, item.y, collectibleWidth, imgHeight + textPadding); }
+                // Draw Arabic Text (Inside/Below Image Area)
+                ctx.fillStyle = '#000000'; ctx.font = `bold ${arabicFontSize}px 'Noto Naskh Arabic', serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+                const arabicY = item.y + imgHeight + textPadding * 2; ctx.fillText(item.data.arabic, item.x + collectibleWidth / 2, arabicY);
+            });
+        }
+        function drawObstacles() { /* ... draw obstacles based on type ... */
+            activeObstacles.forEach(obs => {
+                if (obs.type === 'low') { ctx.fillStyle = '#8B4513'; ctx.fillRect(obs.x, obs.y, obs.width, obs.height); }
+                else if (obs.type === 'high') { ctx.fillStyle = '#444444'; const legWidth = obs.width * 0.2; const topBarHeight = obs.height * highObstacleTopBarHeightFactor; ctx.fillRect(obs.x, obs.y, obs.width, topBarHeight); ctx.fillRect(obs.x, obs.y + topBarHeight, legWidth, obs.height - topBarHeight); ctx.fillRect(obs.x + obs.width - legWidth, obs.y + topBarHeight, legWidth, obs.height - topBarHeight); }
+                else { ctx.fillStyle = 'black'; ctx.fillRect(obs.x, obs.y, obs.width, obs.height); }
+            });
+        }
+        function drawAnimations() { /* ... draw animations ... */
+             const animationSpeed = 0.05;
+             for (let i = activeAnimations.length - 1; i >= 0; i--) { const anim = activeAnimations[i]; if (anim.type === 'collectPop') { anim.progress += animationSpeed; if (anim.progress < 0.5) { anim.scale = 1 + anim.progress * 0.6; } else { anim.scale = 1.3 - (anim.progress - 0.5) * 2.6; anim.alpha = 1 - (anim.progress - 0.5) * 2; } anim.scale = Math.max(0, anim.scale); anim.alpha = Math.max(0, anim.alpha); if (anim.progress >= 1) { activeAnimations.splice(i, 1); } } }
+             activeAnimations.forEach(anim => { if (anim.type === 'collectPop') { const img = images[anim.data.id]; if (!img) return; const currentWidth = anim.initialWidth * anim.scale; const currentHeight = anim.initialHeight * anim.scale; const currentX = anim.x + (anim.initialWidth - currentWidth) / 2; const currentY = anim.y + (anim.initialHeight - currentHeight) / 2; ctx.save(); ctx.globalAlpha = anim.alpha; ctx.drawImage(img, currentX, currentY, currentWidth, currentHeight); ctx.restore(); } });
+        }
+        function drawGate() { /* ... draw gate ... */
+             if (!gateActive) return;
+            const laneWidth = canvasWidth / 3; const doorWidth = laneWidth * 0.8; const doorSpacing = (laneWidth - doorWidth) / 2;
+            const arabicFontSize = 24; const englishFontSize = 20;
+            ctx.fillStyle = '#444'; ctx.fillRect(0, gateY, canvasWidth, promptHeight); ctx.strokeStyle = '#FFF'; ctx.lineWidth = 2; ctx.strokeRect(0, gateY, canvasWidth, promptHeight);
+            ctx.fillStyle = '#FFFFFF'; ctx.font = `bold ${englishFontSize}px 'Inter', sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(gatePromptWord.english, canvasWidth / 2, gateY + promptHeight / 2);
+            gateOptions.forEach(option => {
+                option.x = (option.lane * laneWidth) + doorSpacing; option.y = gateY + promptHeight; option.width = doorWidth; option.height = doorHeight;
+                ctx.fillStyle = '#666'; ctx.fillRect(option.x, option.y, option.width, option.height); ctx.strokeStyle = '#FFF'; ctx.lineWidth = 1; ctx.strokeRect(option.x, option.y, option.width, option.height);
+                ctx.fillStyle = '#FFFFFF'; ctx.font = `bold ${arabicFontSize}px 'Noto Naskh Arabic', serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(option.wordData.arabic, option.x + option.width / 2, option.y + option.height / 2);
+            });
+        }
+
+         // --- Draw Player Sprite ---
+         function drawPlayer() {
+             if (!currentPlayerRunSprite) { // Check the currently selected RUN sprite
+                 ctx.fillStyle = 'red'; const drawY = canvasHeight - playerCurrentY - playerDrawHeight;
+                 ctx.fillRect(playerX, drawY, playerDrawWidth, playerDrawHeight); return;
+             }
+
+             let frameIndex = playerAnimationFrame; // Use running frame by default
+             let sourceX = playerAnimationFrame * playerFrameWidth; // Default to running frame index
+             let drawH = playerDrawHeight; // Default draw height
+
+             if (isJumping) {
+                 // Use running sprite, frame 0 for jump
+                 sourceX = 0; // Use first frame of run sprite as jump pose
+             } else if (isSliding) {
+                 // <<< Draw the running sprite but squashed vertically >>>
+                 sourceX = 0; // Use first frame as slide base pose
+                 drawH = playerDrawHeight * 0.7; // <<< Squash the drawing height
+             }
+             // Else: Use the calculated running frame (playerAnimationFrame)
+
+             const sourceY = 0;
+             const sourceWidth = playerFrameWidth;
+             const sourceHeight = playerFrameHeight;
+             const drawW = playerDrawWidth; // Width doesn't change for slide/jump here
+             const drawY = canvasHeight - playerCurrentY - drawH; // Use potentially adjusted drawH for slide
+
+             ctx.drawImage(
+                 currentPlayerRunSprite, // Always use the run sprite sheet
+                 sourceX, sourceY, // Source rectangle
+                 sourceWidth, sourceHeight,
+                 playerX, drawY, // Destination rectangle
+                 drawW, drawH // Potentially squashed size
+             );
+         }
+
+
+        // --- Game State Updates ---
+        function updateCollectibles() { /* ... update collectibles position ... */
+            if (currentPhase !== 'collecting') return;
+            for (let i = activeCollectibles.length - 1; i >= 0; i--) { const item = activeCollectibles[i]; item.y += gameSpeed; if (item.y > canvasHeight) { activeCollectibles.splice(i, 1); } }
+            spawnTimer--; if (spawnTimer <= 0) { spawnCollectible(); spawnTimer = spawnInterval; }
+        }
+        function updateObstacles() { /* ... update obstacles position ... */
+            if (currentPhase !== 'collecting') return;
+             for (let i = activeObstacles.length - 1; i >= 0; i--) { const obs = activeObstacles[i]; obs.y += gameSpeed; if (obs.y > canvasHeight) { activeObstacles.splice(i, 1); } }
+             obstacleSpawnTimer--; if (obstacleSpawnTimer <= 0) { spawnObstacle(); obstacleSpawnTimer = obstacleSpawnInterval; }
+        }
+        function updateAnimations() { /* ... update animations (frame-based) ... */
+             const animationSpeed = 0.05;
+             for (let i = activeAnimations.length - 1; i >= 0; i--) { const anim = activeAnimations[i]; if (anim.type === 'collectPop') { anim.progress += animationSpeed; if (anim.progress < 0.5) { anim.scale = 1 + anim.progress * 0.6; } else { anim.scale = 1.3 - (anim.progress - 0.5) * 2.6; anim.alpha = 1 - (anim.progress - 0.5) * 2; } anim.scale = Math.max(0, anim.scale); anim.alpha = Math.max(0, anim.alpha); if (anim.progress >= 1) { activeAnimations.splice(i, 1); } } }
+        }
+        function updateGate() { /* ... update gate position ... */
+             if (!gateActive) return;
+             gateY += gameSpeed;
+             const currentVisualDrawHeight = isSliding ? playerDrawHeight * 0.7 : playerDrawHeight; // Use squashed height if sliding
+             const baseHitboxHeight = playerDrawHeight * playerHitboxHeightFactor;
+             const currentHitboxHeight = isSliding ? baseHitboxHeight * playerSlidingHitboxHeightFactor : baseHitboxHeight;
+             const playerVisualTopCanvasY = canvasHeight - playerCurrentY - currentVisualDrawHeight;
+             const hitboxTopCanvasY = playerVisualTopCanvasY + (currentVisualDrawHeight * playerHitboxTopOffsetFactor);
+             const hitboxBottomCanvasY = hitboxTopCanvasY + currentHitboxHeight;
+             const gateDoorTopY = gateY + promptHeight;
+             const gateDoorBottomY = gateY + gateHeight;
+             if (!gateCollisionChecked && hitboxBottomCanvasY >= gateDoorTopY && hitboxTopCanvasY <= gateDoorBottomY) { checkGateCollision(); }
+             if (gateY > canvasHeight) { if (gateActive && !gateCollisionChecked) { handleGateFailure(); } gateActive = false; }
+        }
+        function updatePlayerAnimation() {
+             // Update running animation frame only if not jumping or sliding
+             if (!isJumping && !isSliding) {
+                playerAnimationTimer++;
+                if (playerAnimationTimer >= playerAnimationInterval) {
+                    playerAnimationTimer = 0;
+                    playerAnimationFrame = (playerAnimationFrame + 1) % playerRunFrames; // Cycle through 0, 1, 2
+                }
+             }
+        }
+
+
+        // --- Spawning Functions ---
+        function spawnCollectible() { /* ... spawn collectible logic ... */
+             if (currentVocabulary.length === 0) return; let wordData;
+             if (currentVocabulary.length > 1) { do { wordData = currentVocabulary[Math.floor(Math.random() * currentVocabulary.length)]; } while (wordData.id === lastSpawnedWordId); } else { wordData = currentVocabulary[0]; }
+             lastSpawnedWordId = wordData.id; const lane = Math.floor(Math.random() * 3);
+             const laneWidth = canvasWidth / 3; const laneCenter = laneWidth / 2; const xPos = (lane * laneWidth) + laneCenter - (collectibleWidth / 2); const yPos = -collectibleHeight;
+             const isLaneBlocked = activeObstacles.some(obs => obs.lane === lane && obs.y < obstacleHeight * 1.5); if (isLaneBlocked) { return; }
+             activeCollectibles.push({ id: Date.now() + Math.random(), x: xPos, y: yPos, lane: lane, data: wordData, width: collectibleWidth, height: collectibleHeight });
+        }
+        function spawnObstacle() { /* ... spawn obstacle logic ... */
+             let lane; let attempts = 0;
+             do { lane = Math.floor(Math.random() * 3); const isLaneBlockedByCollectible = activeCollectibles.some(item => item.lane === lane && item.y < collectibleHeight * 1.5); if (lane !== lastObstacleLane && !isLaneBlockedByCollectible) { break; } attempts++; } while (attempts < 5);
+             if (attempts >= 5) { return; }
+             lastObstacleLane = lane;
+             const laneWidth = canvasWidth / 3; const laneCenter = laneWidth / 2; const xPos = (lane * laneWidth) + laneCenter - (obstacleWidth / 2);
+             const yPos = -obstacleHeight;
+             const obsTypeRoll = Math.random(); let type = 'block'; let height = obstacleHeight; let finalY = yPos; let width = obstacleWidth;
+             if (obsTypeRoll < 0.45) { type = 'low'; height = lowObstacleHeight; finalY = yPos + (obstacleHeight - lowObstacleHeight); } // 45% chance low
+             else if (obsTypeRoll < 0.90) { type = 'high'; height = highObstacleHeight; finalY = yPos - highObstacleYOffset; width = obstacleWidth; } // 45% chance high
+             // Else: 10% chance block
+             activeObstacles.push({ x: xPos, y: finalY, lane: lane, width: width, height: height, type: type });
+        }
+
+
+// --- Gate Setup ---
+function setupGate() {
+             console.log("Setting up gate...");
+             currentPhase = 'gate';
+             gateActive = true;
+             gateY = -gateHeight; // Start gate fully above screen
+             activeCollectibles = []; // Clear existing collectibles
+             activeObstacles = []; // Clear existing obstacles
+
+             gateCollisionChecked = false; // Reset collision check flag for the new gate
+
+             // Ensure there are words collected to choose from
+             if (recentlyCollectedWords.length === 0) {
+                 console.warn("setupGate called with no recently collected words. Returning to collecting phase.");
+                 currentPhase = 'collecting';
+                 gateActive = false;
+                 return;
+             }
+
+             // 1. Choose the prompt word
+             gatePromptWord = recentlyCollectedWords[Math.floor(Math.random() * recentlyCollectedWords.length)];
+
+             // <<< Speak the English prompt word >>>
+             speakText(gatePromptWord.english, 'en-US');
+
+             // 2. Prepare options (correct + distractors)
+             let optionsData = [gatePromptWord]; // Start with the correct answer
+             // Use currentVocabulary (words available at current level) for distractors
+             let distractors = currentVocabulary.filter(word => word.id !== gatePromptWord.id);
+             distractors = shuffleArray(distractors); // Shuffle distractors
+
+             // Add 2 unique distractors
+             for (let i = 0; optionsData.length < 3 && i < distractors.length; i++) {
+                 if (!optionsData.some(opt => opt.id === distractors[i].id)) {
+                     optionsData.push(distractors[i]);
+                 }
+             }
+             // Ensure we have exactly 3 options if possible (fallback if not enough distractors)
+             while (optionsData.length < 3 && vocabulary.length > optionsData.length) {
+                 let fallback = vocabulary[Math.floor(Math.random() * vocabulary.length)];
+                 if (!optionsData.some(opt => opt.id === fallback.id)) {
+                     optionsData.push(fallback);
+                 }
+             }
+
+             // 3. Shuffle options and assign lanes
+             optionsData = shuffleArray(optionsData);
+             gateOptions = optionsData.map((wordData, index) => ({
+                 wordData: wordData,
+                 lane: index, // Assign lane 0, 1, 2
+                 isCorrect: wordData.id === gatePromptWord.id
+                 // x, y, width, height will be calculated in drawGate
+             }));
+
+             console.log("Gate Prompt:", gatePromptWord.english);
+             console.log("Gate Options:", gateOptions.map(o => `${o.lane}: ${o.wordData.arabic} (${o.isCorrect})`));
+
+             // 4. Clear recently collected words for the next phase
+             recentlyCollectedWords = [];
+        }
+
+
+
+         // --- Collision Detection (Using State Invincibility & Sprite Size) ---
+        function checkCollisions() {
+            if (currentPhase !== 'collecting') return;
+
+            // --- Calculate Player Hitbox Bounds (Based on DRAWN size) ---
+             const currentVisualDrawHeight = isSliding ? playerDrawHeight * 0.7 : playerDrawHeight; // <<< Use squashed height if sliding
+             const playerHitboxWidth = playerDrawWidth * playerHitboxWidthFactor;
+             const baseHitboxHeight = playerDrawHeight * playerHitboxHeightFactor;
+             const currentHitboxHeight = isSliding ? baseHitboxHeight * playerSlidingHitboxHeightFactor : baseHitboxHeight;
+
+             const hitboxLeft = playerX + (playerDrawWidth - playerHitboxWidth) / 2; // Center based on DRAWN width
+             const hitboxRight = hitboxLeft + playerHitboxWidth;
+             const playerDrawTopCanvasY = canvasHeight - playerCurrentY - currentVisualDrawHeight; // Use current visual height
+             const hitboxTopCanvasY = playerDrawTopCanvasY + (currentVisualDrawHeight * playerHitboxTopOffsetFactor);
+             const hitboxBottomCanvasY = hitboxTopCanvasY + currentHitboxHeight;
+            // --- End Hitbox Calculation ---
+
+            // Check Player vs Collectibles using hitbox bounds
+            for (let i = activeCollectibles.length - 1; i >= 0; i--) {
+                const item = activeCollectibles[i];
+                if (!activeAnimations.some(anim => anim.id === item.id)) {
+                    // AABB Check using canvas coordinates
+                    if (hitboxLeft < item.x + item.width && hitboxRight > item.x &&
+                        hitboxTopCanvasY < item.y + item.height && hitboxBottomCanvasY > item.y) {
+                        handleCollection(item, i);
+                        return; // Process one collision per frame
+                    }
+                }
+            }
+
+            // Check Player vs Obstacles using hitbox bounds
+            for (let i = activeObstacles.length - 1; i >= 0; i--) {
+                const obs = activeObstacles[i];
+                 // AABB Check using canvas coordinates
+                 if (hitboxLeft < obs.x + obs.width && hitboxRight > obs.x &&
+                     hitboxTopCanvasY < obs.y + obs.height && hitboxBottomCanvasY > obs.y)
+                 {
+                     // Collision Detected! Now check for invincibility based on state.
+                     if (obs.type === 'low' && isJumping) {
+                         console.log("Passed low obstacle while jumping"); continue;
+                     } else if (obs.type === 'high' && isSliding) {
+                         console.log("Passed high obstacle while sliding"); continue;
+                     } else {
+                         console.log(`Hit obstacle type: ${obs.type}, Jumping: ${isJumping}, Sliding: ${isSliding}`);
+                         handleObstacleCollision(i); return;
+                     }
+                 }
+            }
+        }
+
+
+        function checkGateCollision() {
+             if (!gateActive || gateCollisionChecked) return;
+             console.log("Checking gate collision...");
+             gateCollisionChecked = true;
+             const correctOption = gateOptions.find(option => option.isCorrect);
+             if (playerLane === correctOption.lane) { handleGateSuccess(); }
+             else { handleGateFailure(); }
+        }
+
+
+        // --- Handle Collection & Collisions ---
+        function handleCollection(item, index) {
+            score += 10;
+            if (!recentlyCollectedWords.some(word => word.id === item.data.id)) { recentlyCollectedWords.push(item.data); if (recentlyCollectedWords.length >= GATE_TRIGGER_COUNT) { setupGate(); } }
+            speakText(item.data.arabic, 'ar'); // Speak Arabic on collection
+            activeAnimations.push({ id: item.id, type: 'collectPop', x: item.x, y: item.y, initialWidth: item.width, initialHeight: item.height, data: item.data, progress: 0, scale: 1, alpha: 1 });
+            activeCollectibles.splice(index, 1);
+            updateUI();
+        }
+        function handleObstacleCollision(index) { /* ... handle obstacle collision ... */
+            console.log("Hit Obstacle!"); showFeedback('failure'); lives--; updateUI();
+            activeObstacles.splice(index, 1); if (lives <= 0) { gameOver(); }
+        }
+
+
+        // --- Handle Gate Results ---
+        function handleGateSuccess() {
+            console.log("Gate Passed!"); showFeedback('success'); score += 50; currentPhase = 'collecting';
+            speakText(gatePromptWord.arabic, 'ar'); // Speak Arabic on success
+            gatesPassed++; if (gatesPassed % LEVEL_UP_GATES === 0) { levelUp(); }
+            spawnTimer = spawnInterval; obstacleSpawnTimer = obstacleSpawnInterval; // Reset timers
+            gatePromptWord = null; gateOptions = []; updateUI();
+        }
+        function handleGateFailure() { /* ... handle failure ... */
+            console.log("Gate Failed!"); showFeedback('failure'); lives--; updateUI();
+            if (lives <= 0) { gameOver(); }
+            else { currentPhase = 'collecting'; spawnTimer = spawnInterval; obstacleSpawnTimer = obstacleSpawnInterval; // Reset timers
+                 gatePromptWord = null; gateOptions = []; }
+        }
+
+
+        // --- Update UI ---
+        function updateUI() { /* ... update score/lives/level display ... */
+            scoreElement.textContent = score; livesElement.textContent = '❤️'.repeat(lives); if (lives <= 0) { livesElement.textContent = '💔'; } levelElement.textContent = currentLevel;
+        }
+
+        // --- Game Over ---
+        function gameOver() { /* ... game over logic ... */
+             isGameOver = true; cancelAnimationFrame(animationFrameId); animationFrameId = null;
+             synth.cancel(); // Stop any ongoing speech
+             messageBox.style.display = 'flex'; messageBox.style.flexDirection = 'column';
+             const gameOverText = messageBox.childNodes[0]; gameOverText.nodeValue = `Game Over! Score: ${score} `;
+        }
+
+        // --- Input Handling ---
+        function handleKeyDown(e) { /* ... keyboard input (incl. pause) ... */
+             if (isGameOver || mainMenu.style.display !== 'none') return; if (e.key === 'p' || e.key === 'P') { togglePause(); return; } if (isPaused) return;
+             switch (e.key) { case 'ArrowLeft': case 'a': movePlayer(-1); break; case 'ArrowRight': case 'd': movePlayer(1); break; case 'ArrowUp': case 'w': startJump(); break; case 'ArrowDown': case 's': startSlide(); break; }
+        }
+        function handleTouchStart(e) { /* ... touch start ... */
+             if (isGameOver || isPaused || mainMenu.style.display !== 'none') return; e.preventDefault(); touchStartX = e.changedTouches[0].screenX; touchStartY = e.changedTouches[0].screenY;
+        }
+        function handleTouchEnd(e) { /* ... touch end ... */
+             if (isGameOver || isPaused || mainMenu.style.display !== 'none') return; e.preventDefault(); touchEndX = e.changedTouches[0].screenX; touchEndY = e.changedTouches[0].screenY; handleSwipe();
+        }
+        function handleSwipe() { /* ... swipe logic ... */
+             const deltaX = touchEndX - touchStartX; const deltaY = touchEndY - touchStartY; const swipeThreshold = 50; const verticalThreshold = 70;
+             if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > verticalThreshold) { if (deltaY < 0) { startJump(); } else { startSlide(); } }
+             else if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > swipeThreshold) { movePlayer(deltaX > 0 ? 1 : -1); }
+        }
+        function movePlayer(direction) {
+             const newLane = playerLane + direction;
+             if (newLane >= 0 && newLane <= 2) {
+                 playerLane = newLane;
+                 calculatePlayerX(); // Update playerX coordinate
+                 // Position is updated visually in drawPlayer
+             }
+        }
+
+        // --- Game Loop ---
+        function gameLoop(timestamp) {
+            if (isGameOver) return;
+
+            // 1. Update Game State (Frame-based)
+            updatePlayerState();
+            updatePlayerAnimation(); // Update the current animation frame
+            updateAnimations();
+            if (currentPhase === 'collecting') {
+                updateCollectibles();
+                updateObstacles();
+                checkCollisions();
+            } else if (currentPhase === 'gate') {
+                updateGate();
+            }
+
+            // 2. Clear Canvas
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            // 3. Draw Canvas Elements
+            drawEnvironment();
+            if (currentPhase === 'collecting') { drawCollectibles(); drawObstacles(); }
+            else if (gateActive) { drawGate(); }
+            drawAnimations();
+            drawPlayer(); // <<< Draw the player sprite
+
+            // 4. Request Next Frame
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+       
+window.addEventListener('keydown', handleKeyDown);
+            window.addEventListener('resize', () => { if (mainMenu.style.display === 'none' && !isPaused) { resizeCanvas(); } });
+            gameContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
+            gameContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
+            startButton.addEventListener('click', startGame);
+            restartButton.addEventListener('click', () => { messageBox.style.display = 'none'; startGame(); });
+            pauseButton.addEventListener('click', togglePause);
+
+            // <<< ADD THIS EVENT LISTENER >>>
+            homeButton.addEventListener('click', () => {
+                messageBox.style.display = 'none'; // Hide game over message
+                gameContainer.style.display = 'none'; // Hide game area
+                uiContainer.style.display = 'none'; // Hide score UI
+                mainMenu.style.display = 'flex'; // Show main menu
+            });
+            // --- End Add Listener ---
+
+            // --- Initial Setup on Load ---
+            // ... (rest of the code) ...
+        // --- Initial Setup on Load ---
+        window.onload = function() {
+            mainMenu.style.display = 'flex'; gameContainer.style.display = 'none'; uiContainer.style.display = 'none';
+            messageBox.style.display = 'none'; pauseOverlay.style.display = 'none';
+            setupGame(); preloadAssets();
+            setTimeout(findArabicVoice, 100);
+        };
+
+    </script>
+</body>
+</html>
