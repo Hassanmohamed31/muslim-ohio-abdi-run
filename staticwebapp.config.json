@@ -1,12 +1,9 @@
 {
   "$schema": "https://json.schemastore.org/staticwebapp.config.json",
   "navigationFallback": {
-    "rewrite": "/run_arabic.html",
+    "rewrite": "/index.html",
     "exclude": ["/assets/*"]
   },
-  "routes": [
-    { "route": "/", "rewrite": "/run_arabic.html" }
-  ],
   "globalHeaders": {
     "Cache-Control": "public, max-age=3600"
   }
